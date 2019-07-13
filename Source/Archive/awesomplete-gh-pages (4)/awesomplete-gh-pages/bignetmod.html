@@ -1,0 +1,591 @@
+
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+rect {
+  fill: none;
+  pointer-events: all;
+}
+
+.node {
+  fill: #000;
+}
+
+.cursor {
+  fill: none;
+  stroke: brown;
+  pointer-events: none;
+}
+
+.link {
+  stroke: #999;
+   opacity: 0.25
+}
+.svg-container {
+    display: inline-block;
+    position: absolute;
+    width: 100%;
+    padding-bottom: 100%;
+     white-space: nowrap;
+
+}
+.svg-content {
+    display: inline-block;
+    position: absolute;
+}
+ .svg-tooltip {
+                pointer-events: none;
+}
+.tooltip {
+                padding: 10px;
+                color: #4A22FF;
+}
+.lead {
+font-style: italic;
+}
+p {
+margin: 5px 0px;
+}
+polygon {
+pointer-events: none;
+            }
+</style>
+<body>
+ <link rel="stylesheet" href="awesomplete.css"/>
+
+  <script src="awesomplete.js" async></script>
+
+<input id="combolist" />
+  
+
+
+  <button onclick="addFirstNode()">click</button>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<div id="container" class="svg-container">
+</div>
+
+<script src="edgelist.js"></script>
+<script>
+
+
+
+
+
+
+
+
+//////////////////////////newly added 
+ var margin1 = {top: 20, right: 10, bottom: 20, left: 10};
+            var width1 = 100 - margin1.left - margin1.right;
+            var height1 = 100 - margin1.top - margin1.bottom;
+var foWidth = 100;
+            var anchor = {'w': width1/3, 'h': height1/3};
+            var t = 50, k = 15;
+            var tip = {'w': (3/4 * t), 'h': k};
+
+
+////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+var location_on_screen = new Proxy({}, {
+  get: function(object, property) {
+    return object.hasOwnProperty(property) ? object[property] : null;
+  }
+
+});
+var added_by = new Proxy({}, { get: function(object, property){
+  return object.hasOwnProperty(property) ? object[property] : null;
+}});
+var is_expanded = new Proxy({}, {
+get: function(object, property){
+  return object.hasOwnProperty(property) ? object[property] : 0;
+}
+});
+var adj_links = new Proxy({}, {
+  get: function(object, property){
+    return object.hasOwnProperty(property) ? object[property] : null;
+  }
+});
+var links_label = new Proxy({}, {
+  get: function (object, property ){
+    return  object.hasOwnProperty(property ) ? object[property] : null;
+  }
+})
+
+var all_links = my_links;
+//all_links = [{"source": "1", "target": "2"}, {"source" : "1", "target": "3"}, {"source": "2", "target": "4"}, {"source": "3", "target": "4"}]
+
+/*var all_links =  [{"source" : "dbo.T_MASTER_SECURITY_UNIVERSE", "target": "dbo.T_MASTER_SECURITY_UNIVERSE_STORE"}, {"source" : "dbo.T_FILE_MONITOR", "target": "dbo.T_FILE_MONITOR"}, {"source" : "dbo.T_MASTER_SECURITY_UNIVERSE", "target": "dbo.T_DS_MASTER_SECURITY_UNIVERSE_OUT"}, {"source" : "dbo.T_DS_CONTROL", "target": "dbo.T_DS_MASTER_SECURITY_UNIVERSE_OUT"}, {"source" : "dbo.T_MASTER_SECURITY_UNIVERSE", "target": "CADIS_PROC.DC_OVDSMSECUN_AUDIT"}, {"source" : "dbo.T_DS_CONTROL", "target": "CADIS_PROC.DC_OVDSMSECUN_AUDIT"}, {"source" : "dbo.T_MASTER_SECURITY_UNIVERSE", "target": "CADIS.DC_OVDSMSECUN_AUDIT"}, {"source" : "dbo.T_DS_CONTROL", "target": "CADIS.DC_OVDSMSECUN_AUDIT"}, {"source" : "dbo.T_MASTER_SECURITY_UNIVERSE", "target": "CADIS_PROC.DC_OVDSMSECUN_INFO_RULE"}, {"source" : "dbo.T_DS_CONTROL", "target": "CADIS_PROC.DC_OVDSMSECUN_INFO_RULE"}, {"source" : "dbo.T_MASTER_SECURITY_UNIVERSE", "target": "CADIS_PROC.DC_OVDSMSECUN_INFO_VALUE"}, {"source" : "dbo.T_DS_CONTROL", "target": "CADIS_PROC.DC_OVDSMSECUN_INFO_VALUE"}, {"source" : "dbo.T_MASTER_SECURITY_UNIVERSE", "target": "CADIS_PROC.DC_OVDSMSECUN_INFO_RUNID"}, {"source" : "dbo.T_DS_CONTROL", "target": "CADIS_PROC.DC_OVDSMSECUN_INFO_RUNID"}, {"source" : "dbo.T_MASTER_SECURITY_UNIVERSE", "target": "CADIS.DC_OVDSMSECUN_RSLT"} ] */
+all_nodes = {}
+
+var  stat_neighbors = {};
+
+
+
+
+
+
+
+
+all_links.forEach(function(link){
+label = link.label
+link.source = all_nodes[link.source] ||
+(all_nodes[link.source] = {name: link.source});
+link.target = all_nodes[link.target] ||
+(all_nodes[link.target] = {name: link.target});
+link.value = +link.value;
+link.label = label
+}); 
+
+////////////////////////////setting the dictionary 
+
+
+
+
+all_links.forEach(function( link){
+  if( links_label[link.source.name] == null){
+    links_label[link.source.name] = {}
+  }
+links_label[link.source.name][link.target.name] = link.label
+});
+
+
+
+///////////////////////////setting the combolist/////////////////////////////
+
+var combolist = document.getElementById("combolist");
+new Awesomplete(combolist, {list: Object.keys(all_nodes)} );
+
+//////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+all_nodes = d3.values(all_nodes);
+
+
+location_on_screen
+stat_neighbors = getNeighbor();
+
+
+//////////
+var chosen = 0;
+var links = []
+var nodes = []
+//location_on_screen[all_nodes[chosen].name] = nodes[0];
+//added_by[all_nodes[chosen].name] = [];
+//adj_links[all_nodes[chosen].name] = [];
+//////////
+
+var width = 960,
+    height = 900, 
+    margin = 0;
+
+var fill = d3.scale.category20();
+
+var force_size = [ width, height ]
+
+
+var force = d3.layout.force()
+    .size(force_size)
+    .nodes(nodes) // initialize with a single node
+    .links(links)
+    .linkDistance(80)
+   .gravity(0.2)
+    .charge(-500)
+    .on('end', function() {
+
+     /* var margin = 20;
+    var x_min = Math.min( 0, Math.min.apply(null, nodes.map(a => a.x))),
+        x_max = Math.max(width, Math.max.apply(null, nodes.map(a => a.x))) - x_min,
+        y_min = Math.min( 0, Math.min.apply(null, nodes.map(a => a.y))),
+        y_max = Math.max(height, Math.max.apply(null, nodes.map(a => a.y))) - y_min;  
+
+    //svg.attr("width", x_max).attr("height", y_max);
+     svg.attr("viewBox", " " +  x_min + " " +  y_min + " " + x_max + " " + y_max    );
+     force_size = [x_max + x_min, y_max + y_min];*/ }
+     //svg.attr("width", x_max).attr("height", )
+      )
+    .on("tick", tick);
+
+
+var svg = d3.select("div#container")
+  .append("svg")
+  .attr("preserveAspectRatio", "xMinYMin meet")
+  //.attr("width", width)
+  //.attr("height", height)
+  .attr("viewBox", "0 0 960 900");
+
+
+
+
+/*var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    //.attr("overflow", scroll);
+
+svg.append("rect")
+    .attr("width", width)
+    .attr("height", height);*/
+
+
+
+var //nodes = force.nodes(),
+    //links = force.links(),
+    text = svg.append("g")
+    .attr("class", "labels")
+  .selectAll("text");
+  link = svg.append("g").selectAll(".link");
+    node = svg.append("g").attr("class", "nodes").selectAll("circle"),
+    
+    //circle = svg.selectAll("circle"),
+
+   
+
+    //circle = sbg.selectAll("");
+
+/*var cursor = svg.append("circle")
+    .attr("r", 30)
+    .attr("transform", "translate(-100,-100)")
+    .attr("class", "cursor");*/
+
+restart();
+
+function mousemove() {
+  cursor.attr("transform", "translate(" + d3.mouse(this) + ")");
+}
+
+function mousedownCanvas() {
+  var point = d3.mouse(this);
+      console.log(point[0] + " " + point[1]);
+      
+}
+
+function mousedownNode(d, i) {
+  //console.log("something");
+ /* nodes.splice(i, 1);
+  links = links.filter(function(l) {
+    return l.source !== d && l.target !== d;
+  });*/
+  if(is_expanded[d.name] == 0)
+  {
+  d3.select(this).style("fill", "red")
+  showNeighbors(d, stat_neighbors);
+
+
+  d3.event.stopPropagation();
+  //svg.attr("viewBox", "-100 -100 300 300");
+    
+  restart();
+ }
+ else
+ {
+    collapse(d);
+    restart();
+ }
+  
+}
+
+
+
+function collapse(d){
+ // console.log(d)
+  is_expanded[d.name] = 0;
+
+  edges_to_be_removed = []
+  nodes_to_be_removed = []
+
+  Object.keys(added_by).forEach(function(n){
+    if(added_by[n].indexOf(d.name) >= 0 ){
+      nodes_to_be_removed.push(n);
+    }
+  });
+
+  //console.log(nodes_to_be_removed)
+  nodes_to_be_removed.forEach(function(nr){
+    adj_links[nr].forEach(function(er){
+        index = links.indexOf(er);
+        edges_to_be_removed.push(er)
+        
+        //links.splice(index, 1)
+    });
+  });
+
+//console.log(edges_to_be_removed)
+
+
+  edges_to_be_removed.forEach(function(er){
+    index = links.indexOf(er)
+    if( index >= 0)
+       links.splice(index, 1)
+  })
+
+  //console.log(links.indexOf(adj_links["dbo.T_DEX_RRB_INDEX_STAGE"][0]));
+
+
+  nodes_to_be_removed.forEach(function(nr){
+    //location_on_screen[nr] = null;
+     
+    index = nodes.indexOf(location_on_screen[nr]);
+    if(index >= 0 )
+    {
+    nodes.splice(index, 1)
+    delete location_on_screen[nr];
+   
+    delete added_by[nr] ;
+    delete  is_expanded[nr]
+
+    delete adj_links[nr];
+
+    }
+  })
+ // index = links.indexOf(adj_links[d.name][0])
+  //links.splice(-1, 1)
+}
+
+function tick() {
+  var margin = 20;
+  node.attr("cx", function(d) { return d.x  = Math.max(margin, Math.min(width - margin, d.x))
+    ; })
+        .attr("cy", function(d) { return d.y = Math.max(margin, Math.min(height - margin, d.y)); 
+        }); 
+
+  link.attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+
+  ///node.attr("transform", function(d){ return "translate(" + d.x + "," + d.y + ")";});
+  node.style("fill", function(d){ return is_expanded[d.name] == 1 ? "red" : "black"; })
+text.attr("transform", function(d){ return "translate(" + d.x + "," + d.y + ")";});
+
+}
+
+function restart() {
+
+  text = text.data(nodes);
+  text.enter().append("text")
+    .attr("dx", 2)
+    .attr("dy", ".35em")
+    .attr("font-family", "courier")
+    .attr("font-size", "10px")
+    .text(function(d) { return d.name });
+
+
+ node = node.data(nodes);
+
+  node.enter().append("circle")
+    .attr("r", 3)
+    .on("mousedown", mousedownNode)
+    .call(force.drag);
+
+;
+
+
+
+
+/*
+  node.append("text")
+  .attr("x", 3)
+  .attr("dy", 0)
+  .attr("font-family", "courier")
+  .attr("font-size", "10px")
+  .attr("z-index", 0)
+  .text(function(d) {return d.name;})
+
+
+  node.append("circle", ".cursor")
+  .on("mousedown", mousedownNode)
+    .call(force.drag)
+  .attr("r", 3);
+  */
+
+
+var temp_text;
+  node.exit()
+      .remove();
+
+  text.exit().remove();
+
+  link = link.data(links);
+
+  link.enter().insert("line", ".node")
+      .attr("class", "link")
+       .on('mouseover', function(d) {
+                    var fo = svg.append('foreignObject')
+                        .attr({
+                            'x': getTheMedian(d)[0] - foWidth /3,
+                            'y': getTheMedian(d)[1],
+                            'width': foWidth,
+                            'class': 'svg-tooltip'
+                        });
+                    var div = fo.append('xhtml:div')
+                        .append('div')
+                        .attr({
+                            'class': 'tooltip'
+                        });
+                    div.append('p')
+                        .style("font-size", "xx-small")
+                        .html(d.label);
+                  
+                    var foHeight = div[0][0].getBoundingClientRect().height;
+                    fo.attr({
+                        'height': foHeight
+                    });
+                    svg.insert('polygon', '.svg-tooltip')
+                        .attr({
+                            'points': "0,0 0," + foHeight + " " + foWidth + "," + foHeight + " " + foWidth + ",0 " + (t) + ",0 " + tip.w + "," + (-tip.h) + " " + (t/2) + ",0",
+                            'height': foHeight + tip.h,
+                            'width': foWidth,
+                            'fill': '#D8D8D8', 
+                            'opacity': 0.75,
+                            'transform': 'translate(' + (getTheMedian(d)[0] - foWidth /3) + ',' + getTheMedian(d)[1] + ')'
+                        });
+                })
+                .on('mouseout', function() {
+                   svg.selectAll('.svg-tooltip').remove();
+                    svg.selectAll('polygon').remove();
+                });
+  link.exit()
+      .remove();
+
+  force.start();
+  //svg.attr("viewBox", "translate(" + Math.min.apply(null, nodes.map(a => a.x)) + "," +  Math.min.apply(null, nodes.map(a => a.y))   + "," + Math.max.apply(null, nodes.map(a => a.x)) + "," + Math.max.apply(null, nodes.map(a => a.x)) + ")");
+
+
+}
+
+function getNeighbor(){
+  stat_neighbors = {};
+  all_nodes.forEach(function(node){
+    stat_neighbors[node.name] = {"in": [], "out": []};
+  });
+  all_links.forEach(function(link){
+    stat_neighbors[link.source.name].out.push(link.target.name);
+    stat_neighbors[link.target.name].in.push(link.source.name);
+  }); 
+  return(stat_neighbors);
+}
+function showNeighbors(d, stat_neighbors) 
+{
+  //set is_expanded to one for this node
+  is_expanded[d.name] = 1;
+
+
+  // body...
+  //node that was clicked on is d. Iterating all incoming to d
+  for(var k = 1; k >= 0; k--)
+  {
+
+    neighbors = (k == 1 ) ? stat_neighbors[d.name].in : stat_neighbors[d.name].out;
+    for (var i = (neighbors).length - 1; i >= 0; i--) 
+    {
+     //n1 is one of the neighbors of d.
+      n1 = neighbors[i];
+      if( location_on_screen[n1] == null)
+      {
+      //setting up the new node added
+      new_node = {name: n1};
+          nodes.push(new_node);
+          location_on_screen[n1] = new_node;
+        for(var  m = 1; m >= 0; m--)
+        {
+          
+          new_node_neighbors = ( m == 1 ) ? stat_neighbors[n1].out : stat_neighbors[n1].in;
+          for (var j = (new_node_neighbors).length - 1; j >= 0; j--) 
+          {
+            n2 = new_node_neighbors[j];
+            adj_new_node = location_on_screen[n2]
+            if(adj_new_node != null)
+            {
+              
+              label = (m == 1) ?  links_label[new_node.name][adj_new_node.name] : links_label[adj_new_node.name][new_node.name];
+              adj_link = (m == 1) ?  {"target":adj_new_node , "source": new_node, "label": label } : {"target": new_node , "source":  adj_new_node, "label": label};
+              links.push(adj_link)
+              adj_links[new_node.name] = adj_links[new_node.name] == null ? [] : adj_links[new_node.name];
+              adj_links[n2] = adj_links[adj_new_node.name] == null ? [] : adj_links[adj_new_node.name];
+              adj_links[new_node.name].push(adj_link);
+              adj_links[adj_new_node.name].push(adj_link);
+            }
+          }
+
+        //for
+        //update added by for the newly added node 
+        }
+          added_by[n1] = (added_by[n1] == null) ? [] :added_by[n1];
+          added_by[d.name].forEach(function(added){
+          added_by[n1].push(added);
+          });
+      
+          added_by[n1].push(d.name);
+        
+      
+      }
+    }
+  }
+
+
+
+}
+function expandbytext(){
+ //console.log( document.getElementById("mytext").value)
+ text = document.getElementById("mytext").value
+ d = location_on_screen[text]
+ showNeighbors(d, stat_neighbors, location_on_screen);
+
+
+  //d3.event.stopPropagation();
+  //svg.attr("viewBox", "-100 -100 300 300");
+    
+  restart();
+} 
+function getTheMedian(d){
+ x1 = d["source"].x
+ x2 = d["target"].x
+ y1 = d["source"].y
+ y2 = d["target"].y
+
+ return [( x1 + x2 ) / 2, (y1 + y2 ) / 2]
+}
+function addFirstNode(){
+ 
+
+ name = document.getElementById("combolist").value
+ //var chosen = 0
+
+ found = ItemByName(name);
+nodes.push(found) 
+location_on_screen[found.name] = found;
+added_by[found.name] = [];
+adj_links[found.name] = [];
+
+
+
+////////////////deleting the list after we added first node
+restart();
+var element = document.getElementById("combolist");
+element.parentNode.removeChild(element);
+delete Awesomplete
+}
+function ItemByName(name){
+for (var i = 0; i < all_nodes.length; i++) {
+  if(all_nodes[i].name == name)
+    return all_nodes[i]
+
+}
+}
+</script>

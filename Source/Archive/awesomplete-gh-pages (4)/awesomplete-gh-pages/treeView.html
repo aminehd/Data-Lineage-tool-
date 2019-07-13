@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+
+
+
+<body>
+
+
+  
+<style>
+
+
+
+#myInput {
+    background-image: url('http://www.birds.com/wp-content/uploads/home/bird4.jpg'); /* Add a search icon to input */
+    display:block;
+    background-repeat: no-repeat; /* Do not repeat the icon image */
+    width: 100px; /* Full-width */
+    font-size: 16px; /* Increase font-size */
+    padding: 12px 20px 12px 40px; /* Add some padding */
+    border: 1px solid #ddd; /* Add a grey border */
+    margin-bottom: 12px; /* Add some space below the input */
+    position: absolute;
+ 
+
+}
+
+
+.highlight {
+  background-color: yellow;
+}
+.icon-bar {
+  display:block;
+  position: fixed;
+  top: 0;
+  left: 0%;
+ /* widows: 100%*/
+    background-color: #f1f1f1;
+  /*-webkit-transform: translateX(-50%);
+  -ms-transform: translateX(-50%);
+  transform: translateX(-50%);*/
+
+
+}
+
+.obj {
+  position: absolute;
+   display:block;
+ 
+}
+.loader{
+    border: 12px solid #353839; /* Light grey */
+    border-top: 12px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    animation: spin 2s linear infinite;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    display: block;
+
+
+
+
+
+
+}
+
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.progress-bar {
+  position: fixed;
+  left: 50%;
+
+
+
+  top: 50%
+
+}
+
+.awesomplete > ul { max-height: 400px; overflow-y: auto; max-width: 200px; overflow-x: auto; }
+
+
+.svg-container {
+    display: inline-block;
+    position: absolute;
+    width: 100%;
+    padding-bottom: 100%;
+     white-space: nowrap;
+
+}
+.svg-content {
+    display: inline-block;
+    position: absolute;
+}
+
+
+.wrapper1, .wrapper2{width: 1000px; border: none 0px RED;
+overflow-x: scroll;;}
+.wrapper1{height: 20px; }
+.wrapper2{height: 1000px; }
+.div1 {width:8000px; height: 20px; }
+.div2 {width:8000px; height: 1000px; ;
+}
+
+</style>
+
+
+
+
+
+
+
+
+<body id="main-body">
+
+<div class="icon-bar" id="iconbar" >
+
+<!--
+  <input class="awesomplete"  id="activeSearchBox"  />
+    <button onclick="globalRemove()">global remove </button>
+-->
+</div>
+
+
+
+
+<div class="progress-bar" id="progressbar">
+
+</div>
+
+ <link rel="stylesheet" href="awesomplete.css"/>
+<script src="awesomplete.js" async></script>
+
+<input id="combolist" />
+<button id="click"  onclick="addFirstNode()">Go</button><br class='br'>
+
+
+<!--raid -->
+
+<input type="radio" name="direction" value="Out" id="raidio2"><p style="display:inline" id="out">Out</p> <br class="br">
+ <input type="radio" name="direction" value="In" id="raidio1"> <p style="display:inline" id="in" >In</p>
+
+
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="jquery-3.3.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+
+	 
+
+
+      
+
+<script src="edgelist.js"></script>
+
+
+
+<script>
+
+
+
+
+
+
+
+
+
+//the maximum id used plus one
+var available_id = 1;
+//all links loaded from the url(ideally)
+var all_links = my_links;
+//all nodes is empty at first 
+all_nodes = {}
+//calculating nodes based on filedes
+all_links.forEach(function(link){
+label = link.label
+link.source = all_nodes[link.source] ||
+(all_nodes[link.source] = {name: link.source});
+link.target = all_nodes[link.target] ||
+(all_nodes[link.target] = {name: link.target});
+link.value = +link.value;
+link.label = label
+}); 
+
+all_nodes = d3.values(all_nodes);
+
+
+var stat_neighbors;
+stat_neighbors = getNeighbor();
+
+
+
+
+//
+
+
+var location_on_the_screen  = new Proxy({},{
+    get: function(object, property){
+        return object.hasOwnProperty(property) ? object[property] : null;
+    }
+})
+
+
+
+
+/////////////////all the specification about the sizes
+
+var width  = 8000; 
+var height = 1000;
+var margin = {top: 10, right: 120, bottom: 10, left: 400}
+var dy = width / 6 ;
+var dx = 10;
+var margin_to_see_menu = 400;
+var top_margin_toolbar = "10px"
+var left_offset_toolbar = 20
+///////////////////////////////////////////////
+var root;
+
+
+
+///////////////////////////setting the combolist and activesearch/////////////////////////////
+
+var combolist = document.getElementById("combolist");
+af = new Awesomplete(combolist, {list: all_nodes.map(a => a.name), maxItems: 100000} );
+
+
+var activeSearch = null;
+var searchObj = null; 
+/* = document.getElementById("activeSearchBox");
+ searchObj= new Awesomplete(activeSearch, {
+    list: []
+});
+*/
+
+//////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var svg = d3.select("body").append("svg")
+
+    .attr('id', "main-svg")
+    .attr("width", width)
+    .attr("height", dx)
+ .attr("viewBox", [-margin.left, -margin.top, width, dx + margin_to_see_menu ]) 
+ //test
+
+    ;//not sure what it is now 
+
+var gLink = svg.append("g")
+      .attr("fill", "none")
+      .attr("stroke", "#555")
+      .attr("stroke-opacity", 0.4)
+      .attr("stroke-width", 1.5);
+
+
+var gNode = svg.append("g")
+			.attr("cursor", "pointer");
+
+var old_leftx = 0;
+
+
+
+
+//////functions ///////////////////////////
+
+tree =  d3.tree().nodeSize([dx, 1000])//if not giving the nodesize, x and y won't be generated
+diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x)
+mycircle = d3.arc()
+
+var menu = contextMenu().items('toggle color', 'collapse here', 'whatever');
+
+////////////////////////////////////////////
+
+
+
+
+function restart(source)
+{
+    //add the progress bar
+   
+
+    var direction = 0  
+
+    calculateLocationOnScreen(source, direction)
+
+    const duration = d3.event && d3.event.altKey ? 2500 : 250;
+    const nodes = root.descendants().reverse();
+    const links = firstLastLinks(nodes);
+
+
+///////////////////setting the searchbox list////////////////////////////
+
+  searchObj.destroy()
+  searchObj= new Awesomplete(activeSearch, {
+      list: Array.from( new Set(nodes.map(a => a.data.name))), maxItems: nodes.length ,
+  });
+
+  ac = activeSearch.parentNode;
+  ac.style.position = "absolute"
+  ac.style.display = "block"
+  ac.style.left = '0px'
+  ac.style.top = '0px'
+  ac.style.height = "20px"
+  ac.style.width = "100px"
+
+  activeSearch.style.display = "block"
+  activeSearch.style.position = "absolute"
+  activeSearch.style.left = (0 + left_offset_toolbar ) + "px"
+  activeSearch.style.top = top_margin_toolbar
+//////////////////////////////////////////
+    //making the 
+
+
+    // Compute the new tree layout.
+    tree(root);
+
+
+    let left = root;
+    let right = root;
+    root.eachBefore(node => {
+      if (node.x < left.x) left = node;
+      if (node.x > right.x) right = node;
+    });
+
+
+    nodes.forEach(function (d){
+    	d.y = d.depth * 300
+    });
+
+
+
+          console.log("left.x", left.x)
+          console.log("old_leftx", old_leftx)
+          
+
+
+
+    const height = right.x - left.x + margin.top + margin.bottom + margin_to_see_menu;
+    const scroll_change = old_leftx - left.x  + source.x - source.x0
+console.log("scroll_change", scroll_change)
+    //
+    const transition = svg.transition()
+        .duration(duration)
+        .attr("height", height)
+        .attr("viewBox", [-margin.left, left.x - margin.top, width, height])
+        .tween("resize", window.ResizeObserver ? null : () => () => svg.dispatch("toggle"))
+        .on('end', function()
+        {   
+          //if the scroll_change is positive, then we first increas the svg size, then  do the scrolling      
+          if(scroll_change > 0) window.scrollBy(0 , scroll_change   ) 
+        })
+        //if the scroll_change is negative, then we first scroll and then resize
+          if(scroll_change < 0) window.scrollBy(0 , scroll_change   ) ;
+
+
+    mul = root.direction == 0 ? -1 : 1;
+    var pi = Math.PI;
+    var arc = d3.arc()
+        .innerRadius(0.5)
+        .outerRadius(4)
+        .startAngle( mul *2 * pi) //converting from degs to radians
+        .endAngle( mul * pi) //just radians
+    
+
+
+
+
+
+
+    // Update the nodes…
+    const node = gNode.selectAll("g")
+      .data(nodes, d => d.id);
+
+
+
+
+
+    // Enter any new nodes at the parent's previous position.
+    const nodeEnter = node.enter().append("g")
+        .attr("id",d =>  d.id + "g")
+        .attr("fill", d => d.text_color ? d.text_color : "black")
+        .attr("transform", d => `translate(${d.y},${d.x})`)
+        //.attr("fill-opacity", 0)
+        .attr("stroke-opacity", 0)
+         .on('mouseover', mouseOver)
+       .on('mouseout', function(){
+              svg.selectAll('.mylabel').remove();
+           })
+       .on("click", d => {
+          
+
+            
+        d.color = "magenta"
+        
+        new_childrens = addNeighbors(d, direction)
+       
+        if (new_children.length  >= 1)  
+        {
+          d.children = new_children ;
+          progressBar()
+        }
+        else new_children._children = [];
+        d._children = null;
+          restart(d);
+
+
+        })
+        .on('contextmenu', function(d){ 
+
+          console.log("clicked on (" + d.x + "," + d.y + ")")
+        d3.event.preventDefault();
+        menu(d.x, d.y, d, direction);
+    })
+        
+
+    nodeEnter.append("path")
+    .attr('class', 'circle' )
+    .attr('d', arc)
+    .attr("id", function(d){  return d.id})
+    //.attr("r", 2.5)
+    .attr("fill", function(d){
+        
+    return d.color
+      }) ;;
+
+    nodeEnter.append("text")
+        .attr("id", function(d){
+            return d.id + "text"
+        })
+        .attr("dy", "0.31em")
+        .attr("x",  -6 )
+        .attr("text-anchor", d =>  "end")
+        .text(d => d.data.name)
+        .attr("font-family", "courier")
+    .attr("font-size", "10px")
+      /*.clone(true).lower()
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-width", 3)
+        .attr("stroke", "white")
+        .attr("font-family", "courier")
+    .attr("font-size", "10px")
+    .attr("fill", "red")*/
+
+    
+    // Transition nodes to their new position.
+    const nodeUpdate = node.merge(nodeEnter)//.transition()
+        .attr("transform", d => `translate(${d.y},${d.x})`)
+        .attr("fill-opacity", 1)
+        .attr("stroke-opacity", 1);
+
+
+
+
+    node.merge(nodeEnter)
+    .selectAll('path')
+    .attr("fill", function(d){
+
+            return d.color
+        });
+        
+
+
+
+    // Transition exiting nodes to the parent's new position.
+    const nodeExit = node.exit()
+    .transition()
+    .attr("transform", d => `translate(${source.y},${source.x})`)
+    .attr("fill-opacity", 0)
+    .attr("stroke-opacity", 0)
+        
+    .on('end', removeProgressBar)
+    .remove()
+        ;
+
+    // Update the links…
+    const link = gLink.selectAll("path")
+      .data(links, d => d.target.id);
+
+    // Enter any new links at the parent's previous position.
+    const linkEnter = link.enter().append("path")
+    //.attr("d", diagonal)
+    .attr("d", d => {
+          const o = {x: source.x0, y: source.y0};
+          return diagonal({source: o, target: o});
+        });
+
+    // Transition links to their new position.
+   link.merge(linkEnter).transition()
+   .on('end', removeProgressBar)
+        .attr("d", diagonal);
+
+    // Transition exiting nodes to the parent's new position.
+    link.exit().transition()
+    .on('end', removeProgressBar)
+    .remove()
+    .attr("d", d => {
+          const o = {x: source.x, y: source.y};
+          return diagonal({source: o, target: o});
+        });
+
+
+
+    window.onscroll = function(){}
+    /*window.scrollBy(0 , (old_leftx - left.x)   ) 
+    window.scrollBy(0,  (source.x - source.x0))*/
+    old_leftx = left.x
+
+
+    // Stash the old positions for transition.
+    root.eachBefore(d => {
+      d.x0 = d.x;
+      d.y0 = d.y;
+    });
+
+
+
+
+//////////////////////////just test     
+ evaluateSearch()
+
+//change the scroll position
+
+
+}
+
+
+
+
+function incrParentHeight(d){
+	node = d.parent;
+	past_node = d; 
+	while( node != null)
+	{
+			node.height = Math.max(node.height, past_node.height + 1)
+			past_node = node;
+			node = node.parent;
+	}
+}
+
+
+
+//add theneighbors to the tree
+
+function addNeighbors(d){
+///direction 0 means clicking shows out
+    var direction = root.direction 
+	neighbors = direction == 0? stat_neighbors[d.data.name].out : stat_neighbors[d.data.name].in;
+    //if d has some children then that is new_children
+	new_children = d.children ? d.children : [];
+	for (var i = 0; i < neighbors.length; i++) {
+		nei = neighbors[i][0]
+
+        label1 = neighbors[i][1]
+
+    index = d.children ? d.children.map(a => a.data.name).indexOf(nei) : -1;
+    
+
+
+
+
+
+if(d.children )
+    {
+
+      index = d.children.map(a => [a.data.name, a.data.label] ).findIndex(function(comp_obj){
+            return comp_obj[0] == nei && comp_obj[1] == label1
+        }) 
+
+
+
+    }
+    else{ index = -1}
+
+
+
+
+
+
+    
+    if(index < 0){
+
+    // will change for in&out option     
+		new_data = {name: nei, children: null, label: label1}
+        new_node = d3.hierarchy(new_data);
+        new_node.parent = d
+        new_node.depth = d.depth + 1
+        new_node.color = "grey"
+        new_node.height = 0
+        incrParentHeight(new_node);
+        new_node.id = available_id++;
+        new_children.push(new_node)
+    }
+    }
+
+   
+	new_children.sort(function(a, b){
+		out = a.data.name > b.data.name ? 1 : (a.data.name  == b.data.name? (a.data.label > b.data.label ? 1 : -1) : -1 );
+        
+
+            
+       // if(a.data.name  == b.data.name) out
+		return out;
+	})
+
+	
+	return new_children
+
+}
+
+
+function getNeighbor(){
+  stat_neighbors = {};
+  all_nodes.forEach(function(node){
+    stat_neighbors[node.name] = {"in": [], "out": []};
+  });
+
+
+
+
+
+  for (var i = 0; i < all_links.length; i++) {
+  	link = all_links[i]
+  	stat_neighbors[link.source.name].out.push([link.target.name, link.label]);
+    stat_neighbors[link.target.name].in.push([link.source.name, link.label]);
+  	
+  }
+
+
+
+  return(stat_neighbors);
+}
+function addFirstNode(){
+  name = document.getElementById("combolist").value
+  found = ItemByName(name);
+  var data = {name: found.name, children: []}
+  root = d3.hierarchy(data); //i'm not sure as to add the second argument or not. , function(d) { return d.children; }
+  root._children = []
+  root.x0 =dy / 2;
+  root.y0 = 0;
+
+
+
+root.descendants().forEach((d, i) => {
+    d.id = i;
+    d._children = d.children;
+    if (d.depth && d.data.name.length !== 7) d.children = null;
+  });
+root.color = "grey"
+root.data.label = null
+
+
+
+;
+//changed now
+root.direction = readtheraidio();
+//root.direction = 0
+
+location_on_the_screen[root.data.name] = [root]
+
+
+///////////////////////////////////adding the global remove and active search 
+
+
+dashboardSetUp()
+////////////////deleting the list after we added first node and deleting the go button 
+
+  var element = document.getElementById("combolist");
+  element.parentNode.removeChild(element);
+  delete af
+
+  element =  document.getElementById("click")
+
+  element.parentNode.removeChild(element)
+
+  element= document.getElementById("raidio1")
+
+//changed now
+  if(element)
+  {
+    element.parentNode.removeChild(element)
+    element = document.getElementById("raidio2")
+    element.parentNode.removeChild(element)
+
+    element = document.getElementById("in")
+    element.parentNode.removeChild(element)
+
+    element = document.getElementById("out")
+    element.parentNode.removeChild(element)
+  }
+///////////////////////////////////////////////
+
+
+  activeSearch.addEventListener("awesomplete-open", function(){
+  searchObj.close()  
+  })  
+  oninput = function()
+  {
+    //activeSearch.value = value  
+    evaluateSearch()
+
+  }
+
+
+
+  restart(root);
+
+}
+
+
+
+function ItemByName(name){
+for (var i = 0; i < all_nodes.length; i++) {
+  if(all_nodes[i].name == name)
+    return all_nodes[i]
+
+}
+
+
+
+
+}
+
+
+function contextMenu() {
+    var height,
+        width, 
+        margin = 0.1, // fraction of width
+        items = [], 
+        rescale = false; 
+    
+    function menu(x, y, d, direction) {
+      
+       d3.event.stopPropagation();
+      con = document.getElementById("contextmenu")
+      if(con){
+      
+        id = con.getAttribute('idd')
+        if(id)
+            if(document.getElementById(id + "g"))
+            {
+              document.getElementById(id + "g").setAttribute('font-weight', 'normal')
+              document.getElementById(id + "text").setAttribute('font-weight', 'normal')
+            }
+        }
+  
+        d3.select('.context-menu').remove();
+
+
+
+
+        document.getElementById(d.id + "g").setAttribute('font-weight', '900')
+        document.getElementById(d.id + "text").setAttribute('font-weight', '900')
+
+        height = 20;
+        width = 90;
+        // Draw the menu
+        //adds g to svg and add proper number of menu entry to g
+        a = d3.select('svg')
+            .append('g')
+            .attr('id', "contextmenu" )
+            .attr('idd', d.id) //.
+            .attr('class', 'context-menu')
+            .selectAll('tmp')
+            .data(items).enter()
+            .append('g').
+            attr("transform", function(d, i){ return "translate(" +  y + " ," +  (x + (i * height)) + ")" })
+            .attr('class', 'menu-entry')
+            .on('click', function(p, i){
+
+
+              if(i == 0 ){
+            	   d.color = d.color == "grey" ? "magenta": "grey";
+                
+
+        		     c =document.getElementById(d.id).setAttribute("fill", d.color)
+              }
+              else if(i == 1){
+                removeDecsendants(d)
+                d.color =  "grey";
+                
+
+                 c =document.getElementById(d.id).setAttribute("fill", d.color)
+              }
+
+            })
+           
+
+            
+          
+        a
+           .style({'cursor': 'pointer'})
+
+        a
+		   //.on('mouseover', function(){ 
+            //	d3.select(this).select('rect').style(style.rect.mouseover) })
+
+		//a.on('mouseout', function(){ 
+           //     d3.select(this).select('rect').style(style.rect.mouseout) });
+        
+
+        //adds rect to .menu-entry
+        //I think instead of select all we could use the above clause output
+
+        a
+            .append('rect')
+            .attr('transform', "translate(" + 0 + "," + 0 + ")")//;
+            .attr('width', width)
+            .attr('height', height)
+            .style("fill", "rgb(244,244,244)" )
+            .style("stroke", "white")
+            .style("stroke-width", "1px")
+
+            
+
+
+        //append some text to them 
+        a
+            .append('text')
+            .text(function(d){ return d; })
+             .attr('transform', "translate(" + 5 + "," + 10 + ")")//;
+            .attr("font-family", "courier")
+    		.attr("font-size", "10px")
+    		.attr('x', 0)
+    		.attr('y', 0)
+            .attr('width', width)
+            .style("fill", "steelblue")
+
+        // Other interactions
+        d3.select('body')
+            .on('click', function() {
+              d3.event.stopPropagation();
+             el = document.getElementById(d.id + "g")
+             if( el == null)
+                console.log(d.id + "man zebelam")
+             if(el )
+              {
+
+                c = document.getElementById(d.id + "g").setAttribute('font-weight', 'normal')
+                  document.getElementById(d.id + "text").setAttribute('font-weight', 'normal')
+              }
+                d3.select('.context-menu').remove();
+                  
+            })
+
+    }
+    
+    menu.items = function(e) {
+        if (!arguments.length) return items;
+        for (i in arguments) items.push(arguments[i]);
+        rescale = true;
+        return menu;
+    }
+
+    // Automatically set width, height, and margin;
+ 
+
+    return menu;
+}
+
+
+function mouseOver(d){
+	
+	var height = 60
+	var width = 370
+	//if (d.parent == null) return;
+	if (d.parent == null ) return;
+
+
+
+	label = d.data.label
+	
+	a = d3.select('svg')
+            .append('g')//.
+            .attr('class', 'mylabel')
+            .selectAll('tmp')
+            .data([1]).enter()
+            .append('g')//.
+            .attr("transform","translate(" + (d.y + 5) + " ," +  d.x + ")" )
+            
+
+            
+          
+        
+
+        a
+            .append('rect')
+            .attr('transform', "translate(" + 0 + "," + 0 + ")")//;
+            .attr('width', width)
+            .attr('height', height)
+            //.attr('fill-opacity', 0.1)
+            .style("fill", "rgb(244,244,244)" )
+            .style("stroke", "white")
+            .style("stroke-width", "1px")
+
+            
+
+        index = label.indexOf("[");   
+        proc_name = index >= 0 ? label.slice(0, index) : label;
+        proc_type = index >= 0 ? label.slice(index + 1, label.length - 1) : "";
+
+        
+        from = root.direction == 0 ? d.parent.data.name : d.data.name;
+        to = root.direction == 0 ? d.data.name : d.parent.data.name;
+        //append some text to them 
+        a
+            .append('text')
+            .text("Proc Name: " + proc_name  )
+            .attr('transform', "translate(" + 5 + "," + 10 + ")")//;
+            .attr("font-family", "courier")
+    		    .attr("font-size", "10px")
+    		    .attr('x', 0)
+    		    .attr('y', 0)
+            .attr('width', width)
+        a
+            .append('text')
+            .text("Proc Type: " + proc_type  )
+            .attr('transform', "translate(" + 5 + "," + 20 + ")")//;
+            .attr("font-family", "courier")
+            .attr("font-size", "10px")
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', width)
+       a.append('text')
+            .text( "From: " +  from)
+            .attr('transform', "translate(" + 5 + "," + 30 + ")")//;
+            .attr("font-family", "courier")
+            .attr("font-size", "10px")
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', width)
+       a.append('text')
+            .text( "To: " +  to)
+            .attr('transform', "translate(" + 5 + "," + 40 + ")")//;
+            .attr("font-family", "courier")
+            .attr("font-size", "10px")
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', width)
+           // .style("fill", "steelblue")
+}
+
+
+
+
+function globalRemove(){
+
+// set the location on screen to nothing but keep the root//////////////////
+ location_on_the_screen  = new Proxy({},{
+    get: function(object, property){
+        return object.hasOwnProperty(property) ? object[property] : null;
+    }
+})
+ location_on_the_screen[root.data.name] = [root]
+// set the location on screen to nothing but keep the root//////////////////
+
+
+    set1 = root.descendants().reverse();
+
+    //the sort funciton is such that the smaller the depth, the more is the index. for nodes on the same depth theuy are ordered ascending on their name and if the names are the same, order ascenidng based on the label
+    set1.sort(function(c, d){
+         return c.depth < d.depth ? -1 : (  (c.depth > d.depth || (c.data.name < d.data.name )  || (c.data.name == d.data.name && c.data.label < d.data.label))  ? 1 : -1);
+    })
+
+    set1.forEach(function(d){
+        d.chilun = []
+        d._color = "red"
+    })
+
+    for (var i = set1.length - 1; i >= 0; i--) {
+        
+        node = set1[i];
+
+
+        if(node.children){
+            node.children = node.chilun
+            if( node.children.length == 0) delete node.children
+        }
+
+
+
+        if((node.color == "magenta" || node._color == "magenta") && node.parent){
+            node.parent._color = "magenta" 
+
+
+            //note that the nodes are ordered the opposite order of their names and labels. thus pushing them from the last to  the first will give the desired order
+            node.parent.chilun.push(node)
+        }
+
+    }
+    
+
+    restart(root)
+    window.scrollTo(0, 0)
+}
+
+function firstLastLinks(nodes){
+    links = []
+     nodes.forEach(function(d){
+        if(d.children && d.children.length > 0 ){
+            child = d.children
+            link = {source: d, target: child[0]}
+            links.push(link)
+            if(child.length > 1) {
+                links.push({source: d, target: child[child.length - 1]})
+            }
+        }
+     });
+     return links;
+}
+function calculateLocationOnScreen(source){
+//we don't add that for the source( it is already on the screen)
+nodes = source.descendants();
+nodes.splice(0, 1)
+for (var i = 0; i < nodes.length; i++) {
+   var node = nodes[i]
+   if(location_on_the_screen[node.data.name] != null)  location_on_the_screen[node.data.name].push(node)
+    else{location_on_the_screen[node.data.name] = [node]}
+}
+
+}
+
+
+
+function highlight(nodes) {
+    desc = root.descendants()
+    for (var i =  desc.length - 1; i >= 0; i--) {
+      d = desc[i]
+      var inputText = document.getElementById(d.id + "g");
+      d.text_color = "black"
+      if(inputText == null ) 
+        console.log(d.id + "man zebelam")
+      if(inputText)
+        inputText.setAttribute("fill", d.text_color)
+    }
+    
+    for (var i = nodes.length - 1; i >= 0; i--) {
+      d = nodes[i]
+      var inputText = document.getElementById(d.id + "g");
+      if(inputText == null ) console.log(d.id + "man zebelam")
+      if(inputText)
+        {
+          d.text_color = "#4F69C6"
+          inputText.setAttribute("fill", d.text_color)
+        }
+     }
+
+
+  
+}
+
+
+function nodesFromName(suggestions){
+    nodes = []
+    suggestions.forEach(function(d){
+        l = location_on_the_screen[d]
+        if(l)
+        l.forEach(function(d){
+            nodes.push(d)
+        })
+    })
+    return nodes
+}
+
+
+function evaluateSearch()
+   {
+    if(searchObj)
+    {
+      searchObj.evaluate()
+      searchObj.close() 
+
+      sugg = searchObj.suggestions ? searchObj.suggestions : [];
+      sugg = activeSearch.value.length < 2 ? [] : sugg;
+      highlight(nodesFromName(sugg))
+      num = document.getElementById("number")
+      if(num){
+        num.innerHTML = sugg.length
+      }
+      }
+
+    }
+function readtheraidio()
+{
+    var radios = document.getElementsByName("direction");
+
+    for (var i = 0, length = radios.length; i < length; i++)
+
+    {
+      if (radios[i].checked)
+      {
+          // do whatever you want with the checked radio
+  
+          return i
+      }
+ //default is out
+ 
+}
+return 0;
+}
+
+function progressBar(){
+    progressbar = document.getElementById("progressbar")
+
+
+loader = document.createElement("div")
+loader.setAttribute('class', 'loader');
+loader.setAttribute('id', 'loader')
+
+progressbar.appendChild(loader)
+
+
+
+
+
+}
+function removeProgressBar(){
+     l = document.getElementById('loader');
+    if(l) l.parentNode.removeChild(l)
+}
+function removeDecsendants(d){
+  to_be_removed = d.descendants();
+  index = to_be_removed.indexOf(d)
+  to_be_removed.splice(index, 1)
+
+
+  to_be_removed.forEach(function(a){
+    index = location_on_the_screen[a.data.name].indexOf(a)
+    if(index >= 0) location_on_the_screen[a.data.name].splice(index, 1)
+  })
+
+  delete d.children
+  restart(d)
+  
+}
+function dashboardSetUp(){
+  ///////////////////////////////////adding the global remove and active search 
+
+  top_margin = top_margin_toolbar
+  left_offset = 10
+  toolbar = document.getElementById("iconbar")
+  toolbar.style.display = "block"
+  toolbar.style.width = "100%"
+  toolbar.style.height = "40px"
+
+  number = document.createElement('button')
+  number.setAttribute('border-style', 'outset')
+  number.setAttribute("id", "number")
+  number.style.height =  "20px"
+  number.style.width = "50px"
+  number.style.position = "absolute"
+  number.style.display = "block"
+  number.style.left = (150 + left_offset_toolbar ) + "px"
+  number.style.top = top_margin
+  number.innerHTML = "0"
+  number.style.border = "1px solid blue"
+  number.style.fontSize = "6px"
+
+
+  activeSearch = document.createElement("input")
+  activeSearch.setAttribute('id',"activesearch")
+  toolbar.appendChild(activeSearch)
+
+  searchObj= new Awesomplete(activeSearch, {
+    list: []
+  });
+
+  a = activeSearch.parentNode;
+  a.style.position = "absolute"
+  a.style.display = "absolute"
+  a.style.left = (0 + left_offset_toolbar ) + "px"
+  a.style.top = top_margin
+  a.style.height = "20px"
+  a.style.width = "100px"
+
+
+  activeSearch.setAttribute("class", "awesomplete myinput ")
+  activesearch.style.position = "absolute"
+  activesearch.style.display = "block"
+  activesearch.style.left = "0px"
+  activesearch.style.top = top_margin
+  activeSearch.setAttribute('placeholder', "Please Search ... ")
+  activeSearch.setAttribute('height', "20px")
+
+
+
+
+  toolbar.appendChild(number)
+
+
+
+
+  go = document.createElement("button")
+  go.setAttribute('content', 'Global Remove');
+  go.setAttribute('class', ' btn');
+  go.style.position = "absolute"
+  go.style.display = "block"
+  go.style.left = (250 + left_offset_toolbar ) + "px"
+  go.style.top = top_margin
+  go.innerHTML = ' remove';
+  go.style.height = "20px"
+  go.style.width = "100px"
+  go.onclick = globalRemove
+  toolbar.appendChild(go)
+
+
+
+  remove = document.createElement("button")
+  remove.setAttribute('content', 'Global Remove');
+  remove.setAttribute('class', ' btn');
+  remove.style.position = "absolute"
+  remove.style.display = "block"
+  remove.style.left = (400 + left_offset_toolbar ) + "px"
+  remove.style.top = top_margin
+  remove.innerHTML = ' start over';
+  remove.style.height = "20px"
+  remove.style.width = "100px"
+  remove.onclick = startOver
+  toolbar.appendChild(remove)
+
+////////////////deleting the list after we added first node and deleting the go button 
+}
+
+
+
+function startOver()
+{
+  
+
+
+  //////////////////////////////////deleting everyting////////////////////////////////////////////////
+  delete searchObj
+  d3.selectAll("svg").remove()
+  d3.selectAll(".awesomplete").remove()
+  d3.selectAll(".br").remove()
+  d3.selectAll("button").remove()
+  document.getElementById("iconbar").style.height = "0px"
+  document.getElementById("iconbar").style.width = "0px"
+ ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ //////////////////////////////////adding button and raidio////////////////////////////////////////////////
+  main_body = document.getElementById("main-body")
+  combolist = document.createElement("input");
+  but = document.createElement('button');
+  but.setAttribute('class', 'btn')
+  but.setAttribute("id", "click")
+  but.innerHTML = "Go"
+
+  but.onclick = addFirstNode
+  br = document.createElement("br")
+  br.setAttribute('class', 'br')
+
+////two raidio bars
+  radio2 = document.createElement('input')
+  radio2.setAttribute('type', 'radio')
+  radio2.setAttribute('name', 'direction')
+  radio2.setAttribute('value', 'Out')
+  radio2.setAttribute('id', 'raidio2')
+  radio1 = document.createElement("input")
+  radio1.setAttribute('type', 'radio')
+  radio1.setAttribute('name', 'direction')
+  radio1.setAttribute('value', 'In')
+  radio1.setAttribute('id', 'raidio1')
+  br2 = document.createElement("br")
+  br2.setAttribute('class', 'br')
+  p1 = document.createElement("p"); 
+  p1.setAttribute('id', 'out')
+  p1.innerHTML = "Out"
+  p1.style.display = "inline"
+  p2 = document.createElement("p"); 
+  p2.setAttribute('id', 'in')
+  p2.innerHTML = "In"
+  p2.style.display = "inline"
+
+  main_body.appendChild(combolist)
+  main_body.appendChild(but)
+  main_body.appendChild(br)
+  main_body.appendChild(radio2)
+  main_body.appendChild(p1)
+  main_body.appendChild(br2)
+  main_body.appendChild(radio1)
+  main_body.appendChild(p2)
+
+  new Awesomplete(combolist, {list: all_nodes.map(a => a.name)} );
+  combolist.setAttribute('id', "combolist")
+  
+
+  
+ 
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  available_id = 1
+  old_leftx = 0
+  ///////////////////////////setting the combolist and activesearch/////////////////////////////
+ 
+
+
+
+
+
+
+ location_on_the_screen  = new Proxy({},{
+    get: function(object, property){
+        return object.hasOwnProperty(property) ? object[property] : null;
+    }
+})
+
+
+activeSearch = null;
+searchObj = null; 
+root = null;
+ svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", dx)
+ .attr("viewBox", [-margin.left, -margin.top, width, dx + margin_to_see_menu ])  
+    ;//not sure what it is now 
+
+ gLink = svg.append("g")
+      .attr("fill", "none")
+      .attr("stroke", "#555")
+      .attr("stroke-opacity", 0.4)
+      .attr("stroke-width", 1.5);
+
+
+ gNode = svg.append("g")
+      .attr("cursor", "pointer");
+
+
+  window.scrollTo(0, 0)
+
+
+}
+
+</script>
+<div class="div2" id="body" style="height: 1px !important;
+
+  width: 1000 !important;
+  overflow: hidden; !important;">
+
+<script>
+    var myDiv = document.getElementById('body');
+//myDiv.scrollTop = 0;
+</script>
+</body>

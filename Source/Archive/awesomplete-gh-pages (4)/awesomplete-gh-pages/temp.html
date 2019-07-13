@@ -1,0 +1,110 @@
+ <div id="body" style="height: 1000px !important;
+
+  width: 1000 !important;
+  border:2px solid #000;
+  overflow: scroll !important;">
+
+
+      <div id="footer">
+
+
+      	 node.merge(nodeEnter)
+    .selectAll('circle')
+    /*.style("fill", function(d){
+
+            return d.color
+        });*/
+
+
+        c.depth < d.depth ? -1 : (  (c.depth > d.depth || (c.data.name < d.data.name )  || (c.data.name == d.data.name && c.data.label < d.data.label))  ? 1 : -1);
+
+
+
+
+        function allAscendants(){
+    set1 = root.descendants().reverse();
+    set1.sort(function(c, d){
+        if(c.depth > d.depth ) return -1;
+        else return 1;
+    })
+
+    set = []
+    for (var i = 0; i < set1.length; i++) {
+        x = set1[i]
+        if(x.color == "magenta") set.push(x);
+    }
+
+
+
+    ids = set.map( a => a.id)
+    setIds = new Set(ids)
+
+
+    indexexInTemp = new Set()
+
+    
+    //any poped element elemetnt from set goes to tempset . at the end temset is all of the nodes with color magenta plus first node in any case 
+    tempSet = []
+    while(set.length > 0){
+        //removing the first element of set and also removing its index
+        node = set[0]
+        set.splice(0, 1)
+
+
+        //adding that node to the new list it it wasn't there before(and also adding it'ss index)
+         is_in = indexexInTemp.has(node.id) ;
+        if(!is_in) {
+            indexexInTemp.add(node.id);
+            tempSet.push(node)
+        }
+
+
+
+        
+        if(node.parent != null) {
+            is_in = setIds.has(node.parent.id) 
+            if(!is_in){
+                setIds.add(node.parent.id);
+                set.push(node.parent)
+            }
+        }
+    }
+
+
+
+    is_in = indexexInTemp.has(root.id) 
+    if( !is_in )
+    {
+        indexexInTemp.add(root.id);
+            tempSet.push(root)
+    }
+
+    //indexes won't change
+    return indexexInTemp
+}
+
+
+
+
+
+<div class="icon-bar">
+  <input class="awesomplete"  id="activeSearchBox"  />
+    <button onclick="globalRemove()">global remove </button>
+</div>
+
+
+ left: 50%;
+  -webkit-transform: translateX(-50%);
+  -ms-transform: translateX(-50%);
+  transform: translateX(-50%);
+
+
+
+
+  <input type="radio" name="direction" value="Out" id="raidio2"><p style="display:inline" id="out">Out</p> <br class="br">
+ <input type="radio" name="direction" value="In" id="raidio1"> <p style="display:inline" id="in" >In</p>
+
+
+
+
+ CADIS_PROC.DC_INPUT755_PROCESSKEYS

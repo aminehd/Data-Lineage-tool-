@@ -1,0 +1,43 @@
+
+
+@echo off
+
+echo *******************************************************************************************************
+echo ************************* British Columbia Investment Management Corporation **************************
+echo ******************************** Enterprise Data Management (EDM) *************************************
+echo *************************************** Data Lineage Tool *********************************************
+echo ******************************* November 2018, Amineh Dadsestan ***************************************
+echo *******************************************************************************************************
+
+echo " "
+echo " "
+
+rem Deleting a folder which was created during development.
+@RD /S /Q "C:\ProgramData\DataLineageBCIEDM"
+
+echo " "
+
+echo Reading lineage information from the database.
+echo Copying the lineage file to %AppData%\DataLineageBCIEDM
+@RD /S /Q %AppData%"\DataLineageBCIEDM"
+xcopy /s/e /y /F "S:\Investment Operations\EDM\Tools\DataLineageTool\Source\connect_db.js"    %AppData%"\DataLineageBCIEDM\"
+cd /D %AppData%\DataLineageBCIEDM
+Cscript.exe  "connect_db.js"
+
+echo " "
+
+
+
+
+
+echo " "
+
+echo Please close this window after Firefox starts.
+cd /D "S:\Investment Operations\EDM\Tools\DataLineageTool"
+START /b /wait "Data Lineage Tool" CALL "C:\Program Files\Mozilla Firefox\firefox.exe" "Source\treeView.html?path=%AppData%"
+
+
+
+
+
+
